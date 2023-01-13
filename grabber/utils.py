@@ -102,7 +102,7 @@ def downloadImage(img_url, fileNumber, metadata, save_dir = None ):
             with open(pathAndFilename, 'wb') as handler:
                 handler.write(img_data)
                 print("File {} saved".format(pathAndFilename))
-                return file_ID
+                return file_ID, filename
         except  IOError as ex:
             print('Error saving file "{}"'.format(filename))
             print("StrError:{} WinError {}".format(ex.strerror, ex.winerror))
@@ -111,7 +111,7 @@ def downloadImage(img_url, fileNumber, metadata, save_dir = None ):
 def grabImages(targetdir, noffles, usemetadata):
     imgIDRepeatCounter = 0
     img_ID_2 = None
-    retrievedIMagesiDs = []
+    retrievedImagesIDs = {}
     try:
         webdrv = webdriver.Chrome()
         webdrv.get(BASE_URL)
@@ -126,14 +126,15 @@ def grabImages(targetdir, noffles, usemetadata):
     # metadata placeholder with real data
     #time.sleep(20)
     imageGrabbed = 0
-   # File retrievedimages.json contains list of id's of downloaded images
-   # so  if this file exist load this list first
-    retrfleslistname = targetdir + "\\" +RETRIEVED_IMAGES_LIST_FILE
-    if os.path.exists(retrfleslistname):
-        with open(retrfleslistname, "r") as lf:
-            retrievedIMagesiDs = json.load(lf)
+   # File retrievedimages.json contains dictionary where keys are ids
+   # of downloaded images and values are file names
+   # So  if this file exist load this list first
+    retrFilesListName = targetdir + "\\" +RETRIEVED_IMAGES_LIST_FILE
+    if os.path.exists(retrFilesListName):
+        with open(retrFilesListName, "r") as lf:
+            retrievedImagesIDs = json.load(lf)
             
-    fnumber = len(retrievedIMagesiDs)
+    fnumber = len(retrievedImagesIDs)
     #noffles = int(noffles)
     while imageGrabbed < noffles:
         # Wait while image in browser will be refreshed   
@@ -148,7 +149,7 @@ def grabImages(targetdir, noffles, usemetadata):
         print("Image metadata : {}.".format( metadata_line_2))
         # Check if file already downloaded and saved
         img_ID = image_url.split("/")[-1]
-        if img_ID not in retrievedIMagesiDs:
+        if img_ID not in retrievedImagesIDs:
             # if not download and save file
             if not usemetadata:
                 metadt = ""
@@ -156,12 +157,12 @@ def grabImages(targetdir, noffles, usemetadata):
                 metadt = metadata_line_2.replace(" ","") + "_"
             # Add some parameters to image URL and download image
             image_url = image_url + "=w1920-h1080-p-k-no-nd-mv"
-            f_ID = downloadImage(image_url, fnumber, metadt, targetdir)
+            f_ID, f_name = downloadImage(image_url, fnumber, metadt, targetdir)
             if f_ID != None:
                 # file sucsessfully downloaded
                 imageGrabbed+=1
                 fnumber+=1
-                retrievedIMagesiDs.append(f_ID)
+                retrievedImagesIDs[f_ID] = f_name
                
                 if img_ID_2 == img_ID:
                     imgIDRepeatCounter += 1
@@ -176,9 +177,9 @@ def grabImages(targetdir, noffles, usemetadata):
                 print("Application exited.")
                 break
         
-    # Save list retrieved images iD's
-    with open(retrfleslistname, "w") as lf:
-        json.dump(retrievedIMagesiDs, lf)
+    # Save dictionaey of retrieved images iD's and file names
+    with open(retrFilesListName, "w") as lf:
+        json.dump(retrievedImagesIDs, lf)
     webdrv.close()
     return imageGrabbed
 
