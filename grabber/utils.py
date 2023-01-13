@@ -9,7 +9,7 @@ import requests
 import os.path
 import time
 import json
-from requests.exceptions import HTTPError, ConnectTimeout
+from requests.exceptions import HTTPError, ConnectTimeout, ConnectionError
 
 def writeData(fname, data):
     with open(fname, 'w') as f:
@@ -82,14 +82,14 @@ def downloadImage(img_url, fileNumber, metadata, save_dir = None ):
     print("File name : {}".format(filename))
     try:
         img_data = requests.get(img_url).content
-    except requests.ConnectTimeout as ct:
+    except ConnectTimeout as ct:
         print("ConnectTimeout")
         
         return None
-    except requests.ConnectionError as ce:
+    except ConnectionError as ce:
         print("ConnectionError")
         return None
-    except requests.HTTPError as he:
+    except HTTPError as he:
         print("HTTPError")
         return None
     except Exception as ex:
