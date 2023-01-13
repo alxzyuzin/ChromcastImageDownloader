@@ -1,3 +1,11 @@
+#-----------------------------------------------------------------------
+# Copyright (c) 2023, Alexander Zyuzin.
+#
+# This file is part of  Chromcast Image Downloader.
+#
+# Contains application functions.      .
+# --------------------------------------------------------------------------
+
 BASE_URL = "https://clients3.google.com/cast/chromecast/home"
 RETRIEVED_IMAGES_LIST_FILE = "retrievedimages.json"
 MAX_IMAGE_REPEAT_COUNTER = 2
