@@ -8,8 +8,14 @@
 
 BASE_URL = "https://clients3.google.com/cast/chromecast/home"
 RETRIEVED_IMAGES_LIST_FILE = "retrievedimages.json"
-MAX_IMAGE_REPEAT_COUNTER = 2
-RETRIEVE_TIMEOUT = 20
+MAX_IMAGE_REPEAT_COUNTER = 10
+RETRIEVE_TIMEOUT = 100
+CONSTANT_FILE_NAME_PART = "ChromCastImage_"
+
+
+
+HIDE_CURSOR = '\x1b[?25l'
+SHOW_CURSOR = '\x1b[?25h'
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
@@ -17,13 +23,23 @@ import requests
 import os.path
 import time
 import json
+import sys
 from requests.exceptions import HTTPError, ConnectTimeout, ConnectionError
+#from progress.bar import Bar
+#from progress.spinner import Spinner
 
+
+def removeTrailedSlashes( instr):
+    if instr != None:
+        res = instr + ""
+        while res[len(res) - 1] == "\\":
+             res = res[:len(res)-1]
+    return res
 def writeData(fname, data):
     with open(fname, 'w') as f:
         f.write(str(data))
 
-def getMetadataLine2( page ):
+def getMetadataLine2( _webdrv ):
     '''
     Get tag content with id = "metadata-line-2
     Parameter
@@ -31,13 +47,14 @@ def getMetadataLine2( page ):
     Return:
         Tag content : String
     '''
+    page = _webdrv.page_source
     metadata = page[page.find('<div id="metadata-line-2"'):]
     metadata = metadata[:metadata.find("</div>")]
     metadata = metadata[metadata.find(">")+1:]
     #metadata = metadata[:metadata.find("<"):]
-    return metadata
+    return metadata.replace(" ","")
 
-def getImageURL(page):
+def getNewImageURL(_webdrv):
    '''
    Extract extract image URL from web page
    Parameter
@@ -45,6 +62,7 @@ def getImageURL(page):
    Return
         Image URL : String
    '''
+   page = _webdrv.page_source
    # Extract img tag content from page
    imgTagData = page[page.find('<img id="picture-background"'):]
    imgTagData = imgTagData[:imgTagData.find(">")]
@@ -60,7 +78,7 @@ def getImageURL(page):
    # image URL is value of keys src and ng-src
    return attribs["ng-src"]
 
-def downloadImage(img_url, fileNumber, metadata, save_dir = None ):
+def downloadImage(img_url, filename):
     '''
     Download image and save it in designated directory
     for image file name used last part of URL 
@@ -74,52 +92,49 @@ def downloadImage(img_url, fileNumber, metadata, save_dir = None ):
         file_ID if file downloaded
         else None
     '''
-    result = None
-    if save_dir != None:
-        while save_dir[len(save_dir) - 1] == "\\":
-            save_dir = save_dir[:len(save_dir)-1]
+    
     
     # File ID = last part of file URL
     # sometime this part is too long to be used as file name
     # so we save file id in the list of ID's retrieved files
     # We use this list to check if file allready downloaded
-    file_ID = img_url.split("/")[-1]
-    mtdt  = metadata.replace(" ","")
-    filename = "ChromCastImage_" + metadata + str(fileNumber) + ".jpg" 
-    pathAndFilename = save_dir + "\\" + filename
+    #file_ID = img_url.split("/")[-1]
+    #mtdt  = metadata.replace(" ","")
+    #filename = "ChromCastImage_" + mtdt + str(fileNumber) + ".jpg" 
+    #pathAndFilename = save_dir + "\\" + filename
     print("File name : {}".format(filename))
     try:
         img_data = requests.get(img_url).content
     except ConnectTimeout as ct:
         print("ConnectTimeout")
-        
-        return None
+        return False
     except ConnectionError as ce:
         print("ConnectionError")
-        return None
+        return False
     except HTTPError as he:
         print("HTTPError")
-        return None
+        return False
     except Exception as ex:
         print('Error retrieving image "{}"'.format(img_url))
         print(ex)
         print("StrError:{} WinError {}".format(ex.strerror, ex.winerror))
-        return None
+        return False
     else:
         try:
-            with open(pathAndFilename, 'wb') as handler:
+            with open(filename, 'wb') as handler:
                 handler.write(img_data)
-                print("File {} saved".format(pathAndFilename))
-                return file_ID, filename
+                print("File {} saved".format(filename))
+                return True
         except  IOError as ex:
             print('Error saving file "{}"'.format(filename))
             print("StrError:{} WinError {}".format(ex.strerror, ex.winerror))
-            return None
+            return False
         
 def grabImages(targetdir, noffles, usemetadata):
     imgIDRepeatCounter = 0
     img_ID_2 = None
     retrievedImagesIDs = {}
+    
     try:
         webdrv = webdriver.Chrome()
         webdrv.get(BASE_URL)
@@ -143,35 +158,34 @@ def grabImages(targetdir, noffles, usemetadata):
             retrievedImagesIDs = json.load(lf)
             
     fnumber = len(retrievedImagesIDs)
-    #noffles = int(noffles)
+    oldImage_url = ""
+    image_url = getNewImageURL(webdrv)
     while imageGrabbed < noffles:
-        # Wait while image in browser will be refreshed   
-        time.sleep(RETRIEVE_TIMEOUT) # Wait for 14 seconds
-        html = webdrv.page_source
-        #with open("html_{}".format(imageGrabbed),"w") as ht:
-        #    ht.write(html)
-        metadata_line_2 = getMetadataLine2(html)
-        image_url = getImageURL(html)
-        
-        print("Image url : {}.".format(image_url))
-        print("Image metadata : {}.".format( metadata_line_2))
+        # Wait while image in browser will be refreshed
+        print("Wait for next image", end = "")
+        while oldImage_url == image_url:          
+             print(".", end = "", flush = True)
+             time.sleep(1)
+             image_url = getNewImageURL(webdrv)
+        oldImage_url = image_url     
+        metadata = ""
+        if usemetadata:
+            metadata = getMetadataLine2(webdrv)
+            if len(metadata) > 0:
+                metadata += "_"
+           
+        print("\nImage url : {}.".format(image_url))
+        print("Image metadata : {}.".format( metadata))
         # Check if file already downloaded and saved
         img_ID = image_url.split("/")[-1]
-        if img_ID not in retrievedImagesIDs:
-            # if not download and save file
-            if not usemetadata:
-                metadt = ""
-            else:
-                metadt = metadata_line_2.replace(" ","") + "_"
+        if img_ID not in retrievedImagesIDs:  # if file with this ID was not downloade and saved      
+            filename = CONSTANT_FILE_NAME_PART + metadata + str(fnumber) + ".jpg" 
             # Add some parameters to image URL and download image
-            image_url = image_url + "=w1920-h1080-p-k-no-nd-mv"
-            f_ID, f_name = downloadImage(image_url, fnumber, metadt, targetdir)
-            if f_ID != None:
-                # file sucsessfully downloaded
+            image_url_with_pars = image_url + "=w1920-h1080-p-k-no-nd-mv"          
+            if downloadImage(image_url_with_pars, targetdir + "\\" + filename): # File sucsessfully downloaded and saved
                 imageGrabbed+=1
                 fnumber+=1
-                retrievedImagesIDs[f_ID] = f_name
-               
+                retrievedImagesIDs[img_ID] = filename              
                 if img_ID_2 == img_ID:
                     imgIDRepeatCounter += 1
                     if imgIDRepeatCounter > MAX_IMAGE_REPEAT_COUNTER:
@@ -191,7 +205,12 @@ def grabImages(targetdir, noffles, usemetadata):
     webdrv.close()
     return imageGrabbed
 
+
+
 def parseArgsAndStart():
+    '''
+    Parse command line arguments and start image downloading
+    '''
     import argparse
     arser = argparse.ArgumentParser(
                     prog = 'grabber',
@@ -213,14 +232,17 @@ def parseArgsAndStart():
     use_metadata = args.m
     td = "Current directory."
     if target_dir != "":
-        td = target_dir
+        while target_dir[len(target_dir) - 1] == "\\":
+            target_dir = target_dir[:len(target_dir)-1]
+                
     print("\nGrabber started\n")
-    print("Target directory:{}\nNumber of images to download: {}.".format(td, n_of_fles ))
+    print("Target directory:{}\nNumber of images to download: {}.".format(target_dir, n_of_fles ))
     if use_metadata:
         print("Image metadata will be pasted into filenames.\n")
 
     i=0
+    print(HIDE_CURSOR, end="")
     i = grabImages(target_dir, n_of_fles, use_metadata)
-
+    print(SHOW_CURSOR, end = "")
     print("Job completed.")
     print("{} files downloaded\n.".format(i))

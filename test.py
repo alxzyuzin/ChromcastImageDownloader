@@ -1,7 +1,6 @@
 BASE_URL = "https://clients3.google.com/cast/chromecast/home"
 #from urllib import requests
 import requests
-import html_to_json
 import json
 
 def writeData(fname, data):

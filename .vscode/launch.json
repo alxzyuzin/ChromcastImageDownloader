@@ -14,8 +14,8 @@
             "args":
              [
                 "-m",
-                "-n", "2",
-                "-p", "C:\\Users\\alxzy\\Pictures\\ChromCast" 
+                "-n", "5",
+                "-p", "C:\\Users\\alxzy\\Pictures\\ChromCast\\\\" 
              ]
         },
         {
