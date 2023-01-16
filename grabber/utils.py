@@ -54,30 +54,53 @@ def getMetadataLine2( _webdrv ):
     #metadata = metadata[:metadata.find("<"):]
     return metadata.replace(" ","")
 
-def getNewImageURL(_webdrv):
-   '''
-   Extract extract image URL from web page
-   Parameter
-        page : String
-   Return
-        Image URL : String
-   '''
-   page = _webdrv.page_source
-   # Extract img tag content from page
-   imgTagData = page[page.find('<img id="picture-background"'):]
-   imgTagData = imgTagData[:imgTagData.find(">")]
+def extractImageURL(webpage):
+    '''
+    Extract extract image URL from web page
+    Parameter
+        webpage : String  web pge content
+    Return
+        Image URL : String URL of image for downloading
+    '''
+    # Extract img tag content from page
+    imgTagData = webpage[webpage.find('<img id="picture-background"'):]
+    imgTagData = imgTagData[:imgTagData.find(">")]
 
-   # Convert img tag attributes to dictionary
-   imgTagAttribsLst = imgTagData.split(" ")
-   attribs = {}
-   for atr in imgTagAttribsLst[1:]:
-      if "=" in atr:
-         atrpair = atr.split("=")
-         attribs[atrpair[0]] = atrpair[1].replace('"',"")
+    # Convert img tag attributes to dictionary
+    imgTagAttribsLst = imgTagData.split(" ")
+    attribs = {}
+    for atr in imgTagAttribsLst[1:]:
+        if "=" in atr:
+            atrpair = atr.split("=")
+            attribs[atrpair[0]] = atrpair[1].replace('"',"")
          
-   # image URL is value of keys src and ng-src
-   return attribs["ng-src"]
+    # image URL is value of keys src and ng-src
+    return attribs["ng-src"]
 
+
+def getNewImageURL(_webdrv, _oldImageURL):
+    '''
+    Wait until browser update image an return URL of new image
+    
+    Parameters:
+        _webdrw: Object  - WEb driver
+        _oldImageURL : String - URL of allready downloaded image
+    
+    Return:
+        String - URL of new image 
+    '''  
+    # Wait while image in browser will be refreshed
+    print("Wait for next image", end = "")
+    while True:
+        imageURL = extractImageURL(_webdrv.page_source)
+        if _oldImageURL != imageURL:
+            break          
+        print(".", end = "", flush = True)
+        time.sleep(1)
+    return imageURL
+
+
+    
 def downloadImage(img_url, filename):
     '''
     Download image and save it in designated directory
@@ -158,16 +181,11 @@ def grabImages(targetdir, noffles, usemetadata):
             retrievedImagesIDs = json.load(lf)
             
     fnumber = len(retrievedImagesIDs)
-    oldImage_url = ""
-    image_url = getNewImageURL(webdrv)
+    image_url = ""
+    
     while imageGrabbed < noffles:
-        # Wait while image in browser will be refreshed
-        print("Wait for next image", end = "")
-        while oldImage_url == image_url:          
-             print(".", end = "", flush = True)
-             time.sleep(1)
-             image_url = getNewImageURL(webdrv)
-        oldImage_url = image_url     
+        image_url = getNewImageURL(webdrv, image_url)
+
         metadata = ""
         if usemetadata:
             metadata = getMetadataLine2(webdrv)
@@ -185,7 +203,8 @@ def grabImages(targetdir, noffles, usemetadata):
             if downloadImage(image_url_with_pars, targetdir + "\\" + filename): # File sucsessfully downloaded and saved
                 imageGrabbed+=1
                 fnumber+=1
-                retrievedImagesIDs[img_ID] = filename              
+                retrievedImagesIDs[img_ID] = filename
+                # Check if max try of downloading the same image exided or not            
                 if img_ID_2 == img_ID:
                     imgIDRepeatCounter += 1
                     if imgIDRepeatCounter > MAX_IMAGE_REPEAT_COUNTER:
