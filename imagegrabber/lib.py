@@ -19,9 +19,12 @@ class grabber:
     restoreErrorMsg = "Can't restore list of downloaded images"
     noPermissionErrorMsg = 'No permissions to read file "{}" {}'
     OSErrorMsg = 'OS error "{}", file "{}"'
+    
+    
+    
     def __init__(self):
         self.retrievedImagesIDs = {}
-        self.parseArgs()
+        self._parseArgs()
         self.retrFilesListName = self.target_dir + "\\" +RETRIEVED_IMAGES_LIST_FILE
 
     def open(self, url):
@@ -58,11 +61,13 @@ class grabber:
         return True
 
     def close(self):
-        self.webdrv.close()
         # Save dictionary of retrieved images iD's and file names
         try:
             with open(self.retrFilesListName, "w") as lf:
                 json.dump(self.retrievedImagesIDs, lf)
+            print("Close webdriver.")    
+            self.webdrv.close()
+            return True
         except PermissionError as pe:
                 print(self.saveErrorMsg)
                 print(self.noPermissionErrorMsg.format(self.retrFilesListName, pe.strerror))
@@ -71,9 +76,16 @@ class grabber:
                 print(self.saveErrorMsg)
                 print(self.OSErrorMsg.format(oe.strerror, self.retrFilesListName))
                 return False
-        return True
 
-    def parseArgs(self):
+    def printTimeSpan(self,st, et):
+        timeSpan = et - st
+        h = int((timeSpan) / 3600)
+        ms = timeSpan % 3600
+        m = int(ms / 60)
+        s = int(ms % 60)
+        print("Download time: {}h {}m {}s".format(h, m, s))
+
+    def _parseArgs(self):
         '''
         Parse command line arguments
         '''
@@ -99,10 +111,10 @@ class grabber:
         td = "Current directory."
         # Remove traling slashes from destination path (target_dir)
         if self.target_dir != "":
-            while self.target_dir[len(target_dir) - 1] == "\\":
-                target_dir = target_dir[:len(target_dir)-1]
+            while self.target_dir[len(self.target_dir) - 1] == "\\":
+                self.target_dir = self.target_dir[:len(self.target_dir)-1]
   
-    def DownloadImages(self):
+    def downloadImages(self):
         if self.target_dir == "":
             td = "Current directory"
         else:
@@ -112,14 +124,13 @@ class grabber:
         if self.use_metadata:
             print("Image metadata will be pasted into filenames.\n")
 
-        i = 0
+        filesDownloaded = 0
         print(HIDE_CURSOR, end="")
-        i = self.grabImages()
+        filesDownloaded = self._grabImages()
         print(SHOW_CURSOR, end = "")
-        print("Job completed.")
-        print("{} files downloaded\n.".format(i))
-
-    def extractImageURL(self, webpage):
+        return filesDownloaded
+        
+    def _extractImageURL(self, webpage):
         '''
         Extract extract image URL from web page
         Parameter
@@ -142,7 +153,7 @@ class grabber:
         # image URL is value of keys src and ng-src
         return attribs["ng-src"]
 
-    def getMetadataLine2(self):
+    def _getMetadataLine2(self):
         '''
         Get tag content with id = "metadata-line-2
             Return:
@@ -154,7 +165,7 @@ class grabber:
         metadata = metadata[metadata.find(">")+1:]
         return metadata.replace(" ","")
 
-    def getNewImageURL(self, oldImageURL ):
+    def _getNewImageURL(self, oldImageURL ):
         '''
         Wait until browser update image an return URL of new image
     
@@ -168,14 +179,64 @@ class grabber:
         # Wait while image in browser will be refreshed
         print("Wait for next image", end = "")
         while True:
-            imageURL = self.extractImageURL(self.webdrv.page_source)
+            imageURL = self._extractImageURL(self.webdrv.page_source)
             if oldImageURL != imageURL:
                 break          
             print(".", end = "", flush = True)
             time.sleep(1)
         return imageURL
 
-    def grabImages(self):
+    def _downloadOneImage(self, img_url, filename):
+        '''
+        Download image and save it in designated directory
+        for image file name used last part of URL 
+        Parameters:
+            img_url : String - image URL to download 
+            fileNumber : Integer - number file to save 
+            save_dir : String - directory where to save image file
+                         if  save_dir is None function save 
+                        file in current directory
+        Return 
+            file_ID if file downloaded
+            else None
+        '''
+        # File ID = last part of file URL
+        # sometime this part is too long to be used as file name
+        # so we save file id in the list of ID's retrieved files
+        # We use this list to check if file allready downloaded
+
+        import requests
+        from requests.exceptions import HTTPError, ConnectTimeout, ConnectionError
+        
+        print("File name : {}".format(filename))
+        try:
+            img_data = requests.get(img_url).content
+        except ConnectTimeout as ct:
+            print("ConnectTimeout")
+            return False
+        except ConnectionError as ce:
+            print("ConnectionError")
+            return False
+        except HTTPError as he:
+            print("HTTPError")
+            return False
+        except Exception as ex:
+            print('Error retrieving image "{}"'.format(img_url))
+            print(ex)
+            print("StrError:{} WinError {}".format(ex.strerror, ex.winerror))
+            return False
+        else:
+            try:
+                with open(filename, 'wb') as handler:
+                    handler.write(img_data)
+                    print("File {} saved".format(filename))
+                    return True
+            except  IOError as ex:
+                print('Error saving file "{}"'.format(filename))
+                print("StrError:{} WinError {}".format(ex.strerror, ex.winerror))
+                return False
+
+    def _grabImages(self):
         imgIDRepeatCounter = 0
         img_ID_2 = None
         retrievedImagesIDs = {}
@@ -184,12 +245,12 @@ class grabber:
         fnumber = len(self.retrievedImagesIDs)
         image_url = ""
     
-        while imageGrabbed < self.n_off_les:
-            image_url = self.getNewImageURL( image_url)
+        while imageGrabbed < self.n_of_fles:
+            image_url = self._getNewImageURL( image_url)
 
             metadata = ""
-            if self.usemetadata:
-                metadata = self.getMetadataLine2()
+            if self.use_metadata:
+                metadata = self._getMetadataLine2()
                 if len(metadata) > 0:
                     metadata += "_"
            
@@ -201,10 +262,10 @@ class grabber:
                 filename = CONSTANT_FILE_NAME_PART + metadata + str(fnumber) + ".jpg" 
                 # Add some parameters to image URL and download image
                 image_url_with_pars = image_url + "=w1920-h1080-p-k-no-nd-mv"          
-                if self.downloadImage(image_url_with_pars, self.target_dir + "\\" + filename): # File sucsessfully downloaded and saved
+                if self._downloadOneImage(image_url_with_pars, self.target_dir + "\\" + filename): # File sucsessfully downloaded and saved
                     imageGrabbed+=1
                     fnumber+=1
-                    retrievedImagesIDs[img_ID] = filename
+                    self.retrievedImagesIDs[img_ID] = filename
                     # Check if max try of downloading the same image exided or not            
                     if img_ID_2 == img_ID:
                         imgIDRepeatCounter += 1
