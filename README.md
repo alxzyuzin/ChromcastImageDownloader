@@ -38,4 +38,4 @@ You can use next parameters when start application
 -  -v V        Verbose level.(default = 0, possible: 0, 1)
 
 Command example:\
-python imagegrabber.py -m -n 40 -p C:\Users\Username\Pictures\Chromcast -v 0
+python startgrabber.py -m -n 40 -p C:\Users\Username\Pictures\Chromcast -v 0
