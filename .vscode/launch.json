@@ -15,7 +15,8 @@
              [
                 "-m",
                 "-n", "2",
-                "-p", "C:\\Users\\alxzy\\Pictures\\ChromCast\\\\" 
+                "-p", "C:\\Users\\alxzy\\Pictures\\ChromCast\\\\",
+                "-v", "0"
              ]
         },
         {
