@@ -1,3 +1,14 @@
+
+#-----------------------------------------------------------------------
+# Copyright (c) 2023, Alexander Zyuzin.
+#
+# This file is part of  Chromcast Image Downloader.
+#
+#
+# Purpose:
+#      Start application.
+#
+# --------------------------------------------------------------------------
 BASE_URL = "https://clients3.google.com/cast/chromecast/home"
 
 import time

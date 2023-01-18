@@ -1,12 +1,11 @@
-HIDE_CURSOR = '\x1b[?25l'
-SHOW_CURSOR = '\x1b[?25h'
-
 #BASE_URL = "https://clients3.google.com/cast/chromecast/home"
+
 RETRIEVED_IMAGES_LIST_FILE = "retrievedimages.json"
 MAX_IMAGE_REPEAT_COUNTER = 10
-#RETRIEVE_TIMEOUT = 100
 CONSTANT_FILE_NAME_PART = "ChromCastImage_"
 
+HIDE_CURSOR = '\x1b[?25l'
+SHOW_CURSOR = '\x1b[?25h'
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
@@ -19,8 +18,6 @@ class grabber:
     restoreErrorMsg = "Can't restore list of downloaded images"
     noPermissionErrorMsg = 'No permissions to read file "{}" {}'
     OSErrorMsg = 'OS error "{}", file "{}"'
-    
-    
     
     def __init__(self):
         self.retrievedImagesIDs = {}
@@ -203,7 +200,7 @@ class grabber:
         import requests
         from requests.exceptions import HTTPError, ConnectTimeout, ConnectionError
         
-        print("\nFile name : {}".format(filename))
+        #print("\nFile name : {}".format(filename))
         try:
             img_data = requests.get(img_url).content
         except ConnectTimeout as ct:
