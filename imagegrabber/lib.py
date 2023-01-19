@@ -27,7 +27,10 @@ class grabber:
     def open(self, url):
         
         try:
-            self.webdrv = webdriver.Chrome()
+            options = webdriver.ChromeOptions() 
+            options.add_argument("start-maximized")
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            self.webdrv = webdriver.Chrome(options=options)
             self.webdrv.get( url)
             
         except WebDriverException as ex:
@@ -221,7 +224,7 @@ class grabber:
             try:
                 with open(filename, 'wb') as handler:
                     handler.write(img_data)
-                    print("File {} saved".format(filename))
+                    print("\nFile {} saved".format(filename))
                     return True
             except  IOError as ex:
                 print('Error saving file "{}"'.format(filename))
