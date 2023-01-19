@@ -1,5 +1,5 @@
 # ChromcastImageDownloader
-# Introduction
+## Introduction
 The application is designed to upload images from the Google Image Collection. These images are shown by Google Chromecast on the TV while the user is not playing content on it. Shuffle shows the images in random order. I wanted to use some of these images as references for my artwork but had difficulty getting a specific image so I decided to develop applications to be able to upload them all locally to my computer.
 # How to install the application
 First of all, you need to have Python installed on your computer.
@@ -21,7 +21,7 @@ pip install -r requirements.txt
 and press Enter.
 Application is ready to use
 
-# Launch application
+## Launch application
 The application is launched by the command
 
 python startgrabber.py
@@ -43,6 +43,6 @@ You can use next parameters when start application
 Command example:\
 python startgrabber.py -m -n 40 -p C:\Users\Username\Pictures\Chromcast -v 0
 
-# Another way use ChromcastImageDownloader
+## Another way use ChromcastImageDownloader
 Download file dist\startgrabber.exe.\
 Run this application. Use parameters as described above
