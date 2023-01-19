@@ -1,4 +1,4 @@
-# ChromcastImageDownloader
+# Chromcast Image Downloader
 ## Introduction
 The application is designed to upload images from the Google Image Collection. These images are shown by Google Chromecast on the TV while the user is not playing content on it. Shuffle shows the images in random order. I wanted to use some of these images as references for my artwork but had difficulty getting a specific image so I decided to develop applications to be able to upload them all locally to my computer.
 ## How to install the application
